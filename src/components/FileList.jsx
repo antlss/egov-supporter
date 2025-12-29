@@ -1,8 +1,11 @@
 import React from 'react';
-import { FileText, Trash2, Image, FileCode } from 'lucide-react';
+import { FileText, Trash2, Image, FileCode, Download, FolderDown } from 'lucide-react';
+import { useToast } from './ToastContainer';
 import './FileList.css';
+import { zip } from 'fflate';
 
 const FileList = ({ files, onSelectFile, selectedFile, onDeleteFile }) => {
+  const toast = useToast();
   const getFileIcon = (type) => {
     switch (type) {
       case 'xml':
@@ -21,12 +24,69 @@ const FileList = ({ files, onSelectFile, selectedFile, onDeleteFile }) => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const handleDownloadFile = (e, path, fileData) => {
+    e.stopPropagation();
+
+    const blob = new Blob([fileData.content], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = path.split('/').pop();
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadAll = () => {
+    if (Object.keys(files).length === 0) {
+      toast.showWarning('ダウンロードするファイルがありません');
+      return;
+    }
+
+    const filesToZip = {};
+    for (const [path, fileData] of Object.entries(files)) {
+      if (fileData.content) {
+        filesToZip[path] = fileData.content;
+      }
+    }
+
+    zip(filesToZip, { level: 6 }, (err, zipped) => {
+      if (err) {
+        toast.showError('ZIPファイルの作成に失敗しました: ' + err.message);
+        return;
+      }
+
+      const blob = new Blob([zipped], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `egov-files-${new Date().getTime()}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.showSuccess('ファイルをダウンロードしました');
+    });
+  };
+
   const fileEntries = Object.entries(files);
 
   return (
     <div className="file-list">
       <div className="file-list-header">
         <h3>ファイル一覧 ({fileEntries.length})</h3>
+        {fileEntries.length > 0 && (
+          <button
+            className="download-all-files-btn"
+            onClick={handleDownloadAll}
+            title="全ファイルをダウンロード"
+          >
+            <FolderDown size={18} />
+            全てダウンロード
+          </button>
+        )}
       </div>
       <div className="file-list-content">
         {fileEntries.length === 0 ? (
@@ -53,16 +113,25 @@ const FileList = ({ files, onSelectFile, selectedFile, onDeleteFile }) => {
                     </div>
                   </div>
                 </div>
-                <button
-                  className="delete-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteFile(path);
-                  }}
-                  title="ファイルを削除"
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div className="file-actions">
+                  <button
+                    className="download-btn"
+                    onClick={(e) => handleDownloadFile(e, path, file)}
+                    title="ファイルをダウンロード"
+                  >
+                    <Download size={16} />
+                  </button>
+                  <button
+                    className="delete-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteFile(path);
+                    }}
+                    title="ファイルを削除"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

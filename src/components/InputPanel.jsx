@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { Upload, Download, Plus, FolderDown } from 'lucide-react';
+import { Upload, Download, Plus } from 'lucide-react';
+import { useToast } from './ToastContainer';
 import './InputPanel.css';
-import { zip } from 'fflate';
 
-const InputPanel = ({ onDecode, onEncode, onAddFile, hasFiles, allFiles }) => {
+const InputPanel = ({ onDecode, onEncode, onAddFile, hasFiles }) => {
   const [inputText, setInputText] = useState('');
   const [outputText, setOutputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const toast = useToast();
 
   const handleDecode = async () => {
     if (!inputText.trim()) {
-      alert('Base64文字列を入力してください');
+      toast.showWarning('Base64文字列を入力してください');
       return;
     }
 
@@ -18,8 +19,9 @@ const InputPanel = ({ onDecode, onEncode, onAddFile, hasFiles, allFiles }) => {
     try {
       await onDecode(inputText);
       setInputText('');
+      toast.showSuccess('ファイルを正常に読み込みました');
     } catch (error) {
-      alert('エラー: ' + error.message);
+      toast.showError('エラー: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -27,7 +29,7 @@ const InputPanel = ({ onDecode, onEncode, onAddFile, hasFiles, allFiles }) => {
 
   const handleEncode = async () => {
     if (!hasFiles) {
-      alert('エンコードするファイルがありません');
+      toast.showWarning('エンコードするファイルがありません');
       return;
     }
 
@@ -35,8 +37,9 @@ const InputPanel = ({ onDecode, onEncode, onAddFile, hasFiles, allFiles }) => {
     try {
       const result = await onEncode();
       setOutputText(result);
+      toast.showSuccess('エンコードが完了しました');
     } catch (error) {
-      alert('エラー: ' + error.message);
+      toast.showError('エラー: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -48,8 +51,9 @@ const InputPanel = ({ onDecode, onEncode, onAddFile, hasFiles, allFiles }) => {
       const response = await fetch('/sample.md');
       const text = await response.text();
       setInputText(text.trim());
+      toast.showSuccess('サンプルファイルを読み込みました');
     } catch (error) {
-      alert('サンプルファイルを読み込めません: ' + error.message);
+      toast.showError('サンプルファイルを読み込めません: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -69,51 +73,7 @@ const InputPanel = ({ onDecode, onEncode, onAddFile, hasFiles, allFiles }) => {
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(outputText);
-    alert('クリップボードにコピーしました！');
-  };
-
-  const handleDownloadAll = async () => {
-    if (!allFiles || Object.keys(allFiles).length === 0) {
-      alert('ダウンロードするファイルがありません');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Prepare files for zipping
-      const filesToZip = {};
-      for (const [path, fileData] of Object.entries(allFiles)) {
-        if (fileData.content) {
-          filesToZip[path] = fileData.content;
-        }
-      }
-
-      // Create ZIP file
-      zip(filesToZip, { level: 6 }, (err, zipped) => {
-        if (err) {
-          alert('ZIPファイルの作成に失敗しました: ' + err.message);
-          setIsLoading(false);
-          return;
-        }
-
-        // Create download link
-        const blob = new Blob([zipped], { type: 'application/zip' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `egov-files-${new Date().getTime()}.zip`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        alert('ファイルをダウンロードしました！');
-        setIsLoading(false);
-      });
-    } catch (error) {
-      alert('エラー: ' + error.message);
-      setIsLoading(false);
-    }
+    toast.showSuccess('クリップボードにコピーしました！');
   };
 
   return (
@@ -144,27 +104,19 @@ const InputPanel = ({ onDecode, onEncode, onAddFile, hasFiles, allFiles }) => {
 
       <div className="panel-section">
         <div className="section-header">
-          <h3>ファイル操作</h3>
+          <h3>新規ファイル追加</h3>
         </div>
         <div className="upload-area">
           <label className="upload-btn">
             <Plus size={16} />
-            ファイルを追加
+            ファイルを選択
             <input
               type="file"
               onChange={handleFileUpload}
               style={{ display: 'none' }}
             />
           </label>
-          <button
-            className="download-all-btn"
-            onClick={handleDownloadAll}
-            disabled={isLoading || !hasFiles}
-          >
-            <FolderDown size={16} />
-            全ファイルをダウンロード
-          </button>
-          <p className="upload-hint">ZIPファイルとして一括保存</p>
+          <p className="upload-hint">全てのファイル形式に対応</p>
         </div>
       </div>
 

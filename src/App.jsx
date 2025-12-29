@@ -3,11 +3,13 @@ import FileList from './components/FileList';
 import XMLEditor from './components/XMLEditor';
 import InputPanel from './components/InputPanel';
 import { decodeAndUnzip, zipAndEncode, stringToUint8Array } from './utils/zipHandler';
+import { useToast } from './components/ToastContainer';
 import './App.css';
 
 function App() {
   const [files, setFiles] = useState({});
   const [selectedFile, setSelectedFile] = useState(null);
+  const toast = useToast();
 
   const handleDecode = async (base64String) => {
     const decodedFiles = await decodeAndUnzip(base64String);
@@ -45,7 +47,7 @@ function App() {
       content: stringToUint8Array(xmlString)
     };
     setFiles(updatedFiles);
-    alert('変更を保存しました！');
+    toast.showSuccess('変更を保存しました！');
   };
 
   const handleAddFile = (filename, content) => {
@@ -68,7 +70,7 @@ function App() {
     };
 
     setFiles({ ...files, [path]: newFile });
-    alert(`ファイルを追加しました：${path}`);
+    toast.showSuccess(`ファイルを追加しました：${path}`);
   };
 
   const handleCloseEditor = () => {
@@ -91,7 +93,6 @@ function App() {
             onEncode={handleEncode}
             onAddFile={handleAddFile}
             hasFiles={Object.keys(files).length > 0}
-            allFiles={files}
           />
         </div>
 

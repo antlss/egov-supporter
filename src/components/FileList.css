@@ -10,6 +10,10 @@
 .file-list-header {
   padding: 16px 20px;
   border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .file-list-header h3 {
@@ -17,6 +21,28 @@
   font-size: 18px;
   font-weight: 600;
   color: #333;
+}
+
+.download-all-files-btn {
+  padding: 8px 16px;
+  border: 1px solid #4caf50;
+  background: #4caf50;
+  color: white;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.download-all-files-btn:hover {
+  background: #43a047;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
 }
 
 .file-list-content {
@@ -125,6 +151,13 @@
   flex-shrink: 0;
 }
 
+.file-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.download-btn,
 .delete-btn {
   padding: 6px;
   border: none;
@@ -136,6 +169,11 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+}
+
+.download-btn:hover {
+  background: #e8f5e9;
+  color: #4caf50;
 }
 
 .delete-btn:hover {
