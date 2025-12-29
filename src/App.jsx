@@ -1,15 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import FileList from './components/FileList';
 import XMLEditor from './components/XMLEditor';
 import InputPanel from './components/InputPanel';
 import { decodeAndUnzip, zipAndEncode, stringToUint8Array } from './utils/zipHandler';
 import { useToast } from './components/ToastContainer';
+import { useAutosave } from './hooks/useAutosave';
 import './App.css';
 
 function App() {
   const [files, setFiles] = useState({});
   const [selectedFile, setSelectedFile] = useState(null);
+  const [isRestored, setIsRestored] = useState(false);
   const toast = useToast();
+  const { loadDraft, clearDraft } = useAutosave(files, selectedFile, toast);
+
+  // Load draft on mount
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft && draft.files && Object.keys(draft.files).length > 0) {
+      setFiles(draft.files);
+      setSelectedFile(draft.selectedFile);
+      setIsRestored(true);
+
+      const fileCount = Object.keys(draft.files).length;
+      const savedDate = new Date(draft.timestamp).toLocaleString('ja-JP');
+      toast.showInfo(`下書きを復元しました (${fileCount}ファイル - ${savedDate})`);
+    }
+  }, []);
 
   const handleDecode = async (base64String) => {
     const decodedFiles = await decodeAndUnzip(base64String);
@@ -77,13 +94,31 @@ function App() {
     setSelectedFile(null);
   };
 
+  const handleClearAll = () => {
+    if (confirm('全てのデータをクリアしてもよろしいですか？')) {
+      setFiles({});
+      setSelectedFile(null);
+      clearDraft();
+      toast.showSuccess('全てのデータをクリアしました');
+    }
+  };
+
   const selectedFileData = selectedFile ? files[selectedFile] : null;
 
   return (
     <div className="app">
       <header className="app-header">
-        <h1>eGov XML Editor</h1>
-        <p>日本政府 eGov API の XMLファイル処理ツール</p>
+        <div className="header-content">
+          <div className="header-text">
+            <h1>eGov XML Editor</h1>
+            <p>日本政府 eGov API の XMLファイル処理ツール</p>
+          </div>
+          {Object.keys(files).length > 0 && (
+            <button className="clear-all-btn" onClick={handleClearAll}>
+              全てクリア
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="app-container">
