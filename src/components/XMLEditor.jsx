@@ -120,7 +120,7 @@ const XMLEditor = ({ file, onSave, onClose }) => {
       onSave(updatedXmlString);
       setHasChanges(false);
     } catch (error) {
-      alert('Lỗi khi lưu XML: ' + error.message);
+      alert('XML保存エラー: ' + error.message);
     }
   };
 
@@ -129,7 +129,7 @@ const XMLEditor = ({ file, onSave, onClose }) => {
       <div className="xml-editor empty">
         <div className="empty-state">
           <Code size={48} className="empty-icon" />
-          <p>Chọn file XML để chỉnh sửa</p>
+          <p>XMLファイルを選択して編集</p>
         </div>
       </div>
     );
@@ -140,14 +140,14 @@ const XMLEditor = ({ file, onSave, onClose }) => {
       <div className="xml-editor-header">
         <div className="header-left">
           <h3>{file.path.split('/').pop()}</h3>
-          {hasChanges && <span className="unsaved-indicator">● Chưa lưu</span>}
+          {hasChanges && <span className="unsaved-indicator">● 未保存</span>}
         </div>
         <div className="header-actions">
           <div className="view-mode-toggle">
             <button
               className={viewMode === 'formatted' ? 'active' : ''}
               onClick={() => setViewMode('formatted')}
-              title="Chế độ form"
+              title="フォームモード"
             >
               <Eye size={16} />
               Form
@@ -155,7 +155,7 @@ const XMLEditor = ({ file, onSave, onClose }) => {
             <button
               className={viewMode === 'raw' ? 'active' : ''}
               onClick={() => setViewMode('raw')}
-              title="Chế độ code"
+              title="コードモード"
             >
               <Code size={16} />
               Code
@@ -165,12 +165,12 @@ const XMLEditor = ({ file, onSave, onClose }) => {
             className="save-btn"
             onClick={handleSave}
             disabled={!hasChanges}
-            title="Lưu thay đổi"
+            title="変更を保存"
           >
             <Save size={16} />
-            Lưu
+            保存
           </button>
-          <button className="close-btn" onClick={onClose} title="Đóng">
+          <button className="close-btn" onClick={onClose} title="閉じる">
             <X size={16} />
           </button>
         </div>
@@ -181,14 +181,14 @@ const XMLEditor = ({ file, onSave, onClose }) => {
           <div className="formatted-view">
             {formFields.length === 0 ? (
               <div className="no-fields">
-                <p>Không tìm thấy trường dữ liệu</p>
+                <p>データフィールドが見つかりません</p>
               </div>
             ) : (
               <>
                 <div className="form-controls">
                   <input
                     type="text"
-                    placeholder="Tìm kiếm field..."
+                    placeholder="フィールドを検索..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="search-input"
@@ -199,10 +199,10 @@ const XMLEditor = ({ file, onSave, onClose }) => {
                       checked={showOnlyEmpty}
                       onChange={(e) => setShowOnlyEmpty(e.target.checked)}
                     />
-                    <span>Chỉ hiện field trống ({formFields.filter(f => f.isEmpty).length})</span>
+                    <span>空のフィールドのみ表示 ({formFields.filter(f => f.isEmpty).length})</span>
                   </label>
                   <div className="field-stats">
-                    Tổng: {formFields.length} fields | Trống: {formFields.filter(f => f.isEmpty).length} | Đã điền: {formFields.filter(f => !f.isEmpty).length}
+                    合計: {formFields.length} | 空: {formFields.filter(f => f.isEmpty).length} | 入力済: {formFields.filter(f => !f.isEmpty).length}
                   </div>
                 </div>
                 <div className="form-fields">
@@ -235,7 +235,7 @@ const XMLEditor = ({ file, onSave, onClose }) => {
                             value={field.value}
                             onChange={(e) => handleFieldChange(originalIndex, e.target.value)}
                             className="field-input"
-                            placeholder={field.isEmpty ? 'Nhập giá trị...' : ''}
+                            placeholder={field.isEmpty ? '値を入力...' : ''}
                           />
                         </div>
                       );
