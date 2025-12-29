@@ -1,0 +1,115 @@
+.xml-code-editor {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  border: 1px solid #3c3c3c;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #1e1e1e;
+}
+
+.xml-highlight,
+.xml-textarea {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  margin: 0;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre;
+  word-wrap: normal;
+  overflow: auto;
+  tab-size: 2;
+  -moz-tab-size: 2;
+}
+
+.xml-highlight {
+  color: #d4d4d4;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.xml-textarea {
+  color: transparent;
+  caret-color: #aeafad;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  z-index: 2;
+}
+
+.xml-textarea::selection {
+  background: rgba(38, 79, 120, 0.8);
+}
+
+/* Scrollbar styling */
+.xml-highlight::-webkit-scrollbar,
+.xml-textarea::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.xml-highlight::-webkit-scrollbar-track,
+.xml-textarea::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.xml-highlight::-webkit-scrollbar-thumb,
+.xml-textarea::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 6px;
+}
+
+.xml-highlight::-webkit-scrollbar-thumb:hover,
+.xml-textarea::-webkit-scrollbar-thumb:hover {
+  background: #4e4e4e;
+}
+
+.xml-highlight::-webkit-scrollbar-corner,
+.xml-textarea::-webkit-scrollbar-corner {
+  background: #1e1e1e;
+}
+
+/* Syntax highlighting colors (VS Code Dark+ theme) */
+.xml-declaration {
+  color: #808080;
+  font-style: italic;
+}
+
+.xml-comment {
+  color: #6a9955;
+  font-style: italic;
+}
+
+.xml-cdata {
+  color: #ce9178;
+}
+
+.xml-tag {
+  color: #4ec9b0;
+  font-weight: 500;
+}
+
+.xml-bracket {
+  color: #808080;
+}
+
+.xml-attr-name {
+  color: #9cdcfe;
+}
+
+.xml-attr-value {
+  color: #ce9178;
+}
+
+/* Focus effect */
+.xml-code-editor:focus-within {
+  border-color: #007acc;
+  box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.15);
+}
