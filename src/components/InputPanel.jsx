@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Upload, Download, Plus } from 'lucide-react';
+import { Upload, Download, Plus, FolderDown } from 'lucide-react';
 import './InputPanel.css';
+import { zip } from 'fflate';
 
-const InputPanel = ({ onDecode, onEncode, onAddFile, hasFiles }) => {
+const InputPanel = ({ onDecode, onEncode, onAddFile, hasFiles, allFiles }) => {
   const [inputText, setInputText] = useState('');
   const [outputText, setOutputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -71,6 +72,50 @@ const InputPanel = ({ onDecode, onEncode, onAddFile, hasFiles }) => {
     alert('クリップボードにコピーしました！');
   };
 
+  const handleDownloadAll = async () => {
+    if (!allFiles || Object.keys(allFiles).length === 0) {
+      alert('ダウンロードするファイルがありません');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Prepare files for zipping
+      const filesToZip = {};
+      for (const [path, fileData] of Object.entries(allFiles)) {
+        if (fileData.content) {
+          filesToZip[path] = fileData.content;
+        }
+      }
+
+      // Create ZIP file
+      zip(filesToZip, { level: 6 }, (err, zipped) => {
+        if (err) {
+          alert('ZIPファイルの作成に失敗しました: ' + err.message);
+          setIsLoading(false);
+          return;
+        }
+
+        // Create download link
+        const blob = new Blob([zipped], { type: 'application/zip' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `egov-files-${new Date().getTime()}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        alert('ファイルをダウンロードしました！');
+        setIsLoading(false);
+      });
+    } catch (error) {
+      alert('エラー: ' + error.message);
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="input-panel">
       <div className="panel-section">
@@ -99,19 +144,27 @@ const InputPanel = ({ onDecode, onEncode, onAddFile, hasFiles }) => {
 
       <div className="panel-section">
         <div className="section-header">
-          <h3>新規ファイル追加</h3>
+          <h3>ファイル操作</h3>
         </div>
         <div className="upload-area">
           <label className="upload-btn">
             <Plus size={16} />
-            ファイルを選択
+            ファイルを追加
             <input
               type="file"
               onChange={handleFileUpload}
               style={{ display: 'none' }}
             />
           </label>
-          <p className="upload-hint">全てのファイル形式に対応</p>
+          <button
+            className="download-all-btn"
+            onClick={handleDownloadAll}
+            disabled={isLoading || !hasFiles}
+          >
+            <FolderDown size={16} />
+            全ファイルをダウンロード
+          </button>
+          <p className="upload-hint">ZIPファイルとして一括保存</p>
         </div>
       </div>
 

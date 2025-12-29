@@ -1,12 +1,83 @@
-import React, { useState, useEffect } from 'react';
-import { Save, X, Eye, Code } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { Save, X, Eye, Code, FileText } from 'lucide-react';
 import { uint8ArrayToString, parseXML, xmlToString } from '../utils/zipHandler';
 import XMLCodeEditor from './XMLCodeEditor';
+import XMLHTMLPreview from './XMLHTMLPreview';
 import './XMLEditor.css';
 
-const XMLEditor = ({ file, onSave, onClose }) => {
+// Memoized sub-components for better performance
+const FormControls = memo(({ searchTerm, setSearchTerm, showOnlyEmpty, setShowOnlyEmpty, formFields }) => {
+  const emptyCount = useMemo(() => formFields.filter(f => f.isEmpty).length, [formFields]);
+  const filledCount = formFields.length - emptyCount;
+
+  return (
+    <div className="form-controls">
+      <input
+        type="text"
+        placeholder="フィールドを検索..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="search-input"
+      />
+      <label className="checkbox-label">
+        <input
+          type="checkbox"
+          checked={showOnlyEmpty}
+          onChange={(e) => setShowOnlyEmpty(e.target.checked)}
+        />
+        <span>空のフィールドのみ表示 ({emptyCount})</span>
+      </label>
+      <div className="field-stats">
+        合計: {formFields.length} | 空: {emptyCount} | 入力済: {filledCount}
+      </div>
+    </div>
+  );
+});
+
+const FormFieldsList = memo(({ formFields, searchTerm, showOnlyEmpty, handleFieldChange }) => {
+  const filteredFields = useMemo(() => {
+    return formFields.filter(field => {
+      const matchesSearch = !searchTerm ||
+        field.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        field.path.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesEmptyFilter = !showOnlyEmpty || field.isEmpty;
+
+      return matchesSearch && matchesEmptyFilter;
+    });
+  }, [formFields, searchTerm, showOnlyEmpty]);
+
+  return (
+    <div className="form-fields">
+      {filteredFields.map((field) => {
+        const originalIndex = formFields.indexOf(field);
+        return (
+          <div
+            key={originalIndex}
+            className={`form-field ${field.isEmpty ? 'empty-field' : 'filled-field'}`}
+            style={{ paddingLeft: `${field.level * 12}px` }}
+          >
+            <label>
+              <span className="field-name">{field.name}</span>
+              <span className="field-path">{field.path}</span>
+            </label>
+            <input
+              type="text"
+              value={field.value}
+              onChange={(e) => handleFieldChange(originalIndex, e.target.value)}
+              className="field-input"
+              placeholder={field.isEmpty ? '値を入力...' : ''}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+});
+
+const XMLEditor = ({ file, onSave, onClose, allFiles }) => {
   const [content, setContent] = useState('');
-  const [viewMode, setViewMode] = useState('formatted'); // 'formatted' or 'raw'
+  const [viewMode, setViewMode] = useState('formatted'); // 'formatted', 'code', or 'preview'
   const [formFields, setFormFields] = useState([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,9 +106,19 @@ const XMLEditor = ({ file, onSave, onClose }) => {
     const root = xmlDoc.documentElement;
 
     // Recursive function to extract ALL elements (both with and without text content)
-    const traverse = (node, path = '', level = 0) => {
+    const traverse = (node, path = '', level = 0, indexMap = {}) => {
       if (node.nodeType === Node.ELEMENT_NODE) {
-        const newPath = path + '/' + node.nodeName;
+        // Create unique path with index for duplicate tag names
+        const tagName = node.nodeName;
+        const tagKey = path + '/' + tagName;
+
+        // Track index for this tag at this level
+        if (!indexMap[tagKey]) {
+          indexMap[tagKey] = 0;
+        }
+        const tagIndex = indexMap[tagKey]++;
+
+        const newPath = `${path}/${tagName}[${tagIndex}]`;
 
         // Check if this element has child elements
         const childElements = Array.from(node.children);
@@ -54,32 +135,65 @@ const XMLEditor = ({ file, onSave, onClose }) => {
             value: textContent,
             element: node,
             level: level,
-            isEmpty: !textContent.trim()
+            isEmpty: !textContent.trim(),
+            index: tagIndex
           });
         } else {
           // This element has children, traverse them
+          const childIndexMap = {};
           childElements.forEach(child => {
-            traverse(child, newPath, level + 1);
+            traverse(child, newPath, level + 1, childIndexMap);
           });
         }
       }
     };
 
-    traverse(root, '', 0);
+    traverse(root, '', 0, {});
     return fields;
   };
 
-  const handleFieldChange = (index, newValue) => {
-    const updatedFields = [...formFields];
-    updatedFields[index].value = newValue;
-    setFormFields(updatedFields);
+  const handleFieldChange = useCallback((index, newValue) => {
+    setFormFields(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], value: newValue, isEmpty: !newValue.trim() };
+      return updated;
+    });
     setHasChanges(true);
-  };
 
-  const handleRawContentChange = (e) => {
+    // Sync content with form fields for preview
+    try {
+      const xmlDoc = parseXML(content);
+      const pathParts = formFields[index].path.split('/').filter(p => p);
+      let currentNode = xmlDoc.documentElement;
+
+      for (let i = 1; i < pathParts.length; i++) {
+        const part = pathParts[i];
+        const match = part.match(/^(.+)\[(\d+)\]$/);
+        if (match) {
+          const tagName = match[1];
+          const idx = parseInt(match[2], 10);
+          const children = Array.from(currentNode.children).filter(
+            child => child.nodeName === tagName
+          );
+          if (children[idx]) {
+            currentNode = children[idx];
+          }
+        }
+      }
+
+      if (currentNode) {
+        currentNode.textContent = newValue;
+        setContent(xmlToString(xmlDoc));
+      }
+    } catch (error) {
+      console.warn('Failed to sync content:', error);
+    }
+  }, [content, formFields]);
+
+  const handleRawContentChange = useCallback((e) => {
     setContent(e.target.value);
     setHasChanges(true);
-  };
+  }, []);
 
   const handleSave = () => {
     try {
@@ -89,20 +203,29 @@ const XMLEditor = ({ file, onSave, onClose }) => {
         // Update XML from form fields
         const xmlDoc = parseXML(content);
         formFields.forEach(field => {
-          // Find the node in the current document using path
-          const xpath = field.path.split('/').filter(p => p);
+          // Parse path with indices: /root/tag[0]/subtag[1]
+          const pathParts = field.path.split('/').filter(p => p);
           let currentNode = xmlDoc.documentElement;
 
-          // Navigate to the target element
-          for (let i = 1; i < xpath.length; i++) {
-            const tagName = xpath[i];
-            const children = Array.from(currentNode.children);
-            const found = children.find(child => child.nodeName === tagName);
-            if (found) {
-              currentNode = found;
-            } else {
-              console.warn(`Could not find element: ${tagName} in path ${field.path}`);
-              return;
+          // Navigate to the target element using indices
+          for (let i = 1; i < pathParts.length; i++) {
+            const part = pathParts[i];
+            const match = part.match(/^(.+)\[(\d+)\]$/);
+
+            if (match) {
+              const tagName = match[1];
+              const index = parseInt(match[2], 10);
+
+              const children = Array.from(currentNode.children).filter(
+                child => child.nodeName === tagName
+              );
+
+              if (children[index]) {
+                currentNode = children[index];
+              } else {
+                console.warn(`Could not find element: ${tagName}[${index}] in path ${field.path}`);
+                return;
+              }
             }
           }
 
@@ -120,6 +243,7 @@ const XMLEditor = ({ file, onSave, onClose }) => {
       onSave(updatedXmlString);
       setHasChanges(false);
     } catch (error) {
+      console.error('Save error:', error);
       alert('XML保存エラー: ' + error.message);
     }
   };
@@ -153,12 +277,20 @@ const XMLEditor = ({ file, onSave, onClose }) => {
               Form
             </button>
             <button
-              className={viewMode === 'raw' ? 'active' : ''}
-              onClick={() => setViewMode('raw')}
+              className={viewMode === 'code' ? 'active' : ''}
+              onClick={() => setViewMode('code')}
               title="コードモード"
             >
               <Code size={16} />
               Code
+            </button>
+            <button
+              className={viewMode === 'preview' ? 'active' : ''}
+              onClick={() => setViewMode('preview')}
+              title="プレビューモード"
+            >
+              <FileText size={16} />
+              Preview
             </button>
           </div>
           <button
@@ -185,72 +317,31 @@ const XMLEditor = ({ file, onSave, onClose }) => {
               </div>
             ) : (
               <>
-                <div className="form-controls">
-                  <input
-                    type="text"
-                    placeholder="フィールドを検索..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="search-input"
-                  />
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={showOnlyEmpty}
-                      onChange={(e) => setShowOnlyEmpty(e.target.checked)}
-                    />
-                    <span>空のフィールドのみ表示 ({formFields.filter(f => f.isEmpty).length})</span>
-                  </label>
-                  <div className="field-stats">
-                    合計: {formFields.length} | 空: {formFields.filter(f => f.isEmpty).length} | 入力済: {formFields.filter(f => !f.isEmpty).length}
-                  </div>
-                </div>
-                <div className="form-fields">
-                  {formFields
-                    .filter(field => {
-                      // Filter by search term
-                      const matchesSearch = !searchTerm ||
-                        field.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        field.path.toLowerCase().includes(searchTerm.toLowerCase());
-
-                      // Filter by empty status
-                      const matchesEmptyFilter = !showOnlyEmpty || field.isEmpty;
-
-                      return matchesSearch && matchesEmptyFilter;
-                    })
-                    .map((field, index) => {
-                      const originalIndex = formFields.indexOf(field);
-                      return (
-                        <div
-                          key={originalIndex}
-                          className={`form-field ${field.isEmpty ? 'empty-field' : 'filled-field'}`}
-                          style={{ paddingLeft: `${field.level * 12}px` }}
-                        >
-                          <label>
-                            <span className="field-name">{field.name}</span>
-                            <span className="field-path">{field.path}</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={field.value}
-                            onChange={(e) => handleFieldChange(originalIndex, e.target.value)}
-                            className="field-input"
-                            placeholder={field.isEmpty ? '値を入力...' : ''}
-                          />
-                        </div>
-                      );
-                    })}
-                </div>
+                <FormControls
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  showOnlyEmpty={showOnlyEmpty}
+                  setShowOnlyEmpty={setShowOnlyEmpty}
+                  formFields={formFields}
+                />
+                <FormFieldsList
+                  formFields={formFields}
+                  searchTerm={searchTerm}
+                  showOnlyEmpty={showOnlyEmpty}
+                  handleFieldChange={handleFieldChange}
+                />
               </>
             )}
           </div>
-        ) : (
+        ) : viewMode === 'code' ? (
           <div className="raw-view">
             <XMLCodeEditor
               value={content}
               onChange={handleRawContentChange}
             />
           </div>
+        ) : (
+          <XMLHTMLPreview xmlString={content} allFiles={allFiles} />
         )}
       </div>
     </div>

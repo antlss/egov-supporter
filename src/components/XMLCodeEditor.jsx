@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import './XMLCodeEditor.css';
 
 const XMLCodeEditor = ({ value, onChange }) => {
@@ -8,6 +8,12 @@ const XMLCodeEditor = ({ value, onChange }) => {
   useEffect(() => {
     syncScroll();
   }, [value]);
+
+  const handleChange = (e) => {
+    if (onChange) {
+      onChange(e);
+    }
+  };
 
   const syncScroll = () => {
     if (textareaRef.current && highlightRef.current) {
@@ -20,10 +26,11 @@ const XMLCodeEditor = ({ value, onChange }) => {
     syncScroll();
   };
 
-  const highlightXML = (xml) => {
-    if (!xml) return '';
+  // Memoize highlighted XML để tránh re-render không cần thiết
+  const highlightedXML = useMemo(() => {
+    if (!value) return '';
 
-    let highlighted = xml;
+    let highlighted = value;
 
     // Escape HTML
     highlighted = highlighted
@@ -81,19 +88,19 @@ const XMLCodeEditor = ({ value, onChange }) => {
     );
 
     return highlighted;
-  };
+  }, [value]);
 
   return (
     <div className="xml-code-editor">
       <div
         ref={highlightRef}
         className="xml-highlight"
-        dangerouslySetInnerHTML={{ __html: highlightXML(value) }}
+        dangerouslySetInnerHTML={{ __html: highlightedXML }}
       />
       <textarea
         ref={textareaRef}
         value={value}
-        onChange={onChange}
+        onChange={handleChange}
         onScroll={handleScroll}
         className="xml-textarea"
         spellCheck="false"

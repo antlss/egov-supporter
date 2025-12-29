@@ -91,6 +91,7 @@ function App() {
             onEncode={handleEncode}
             onAddFile={handleAddFile}
             hasFiles={Object.keys(files).length > 0}
+            allFiles={files}
           />
         </div>
 
@@ -108,6 +109,7 @@ function App() {
             file={selectedFileData}
             onSave={handleSaveXML}
             onClose={handleCloseEditor}
+            allFiles={files}
           />
         </div>
       </div>
