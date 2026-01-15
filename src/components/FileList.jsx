@@ -1,11 +1,53 @@
-import React from 'react';
-import { FileText, Trash2, Image, FileCode, Download, FolderDown } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { FileText, Trash2, Image, FileCode, Download, FolderDown, Pencil, Check, X } from 'lucide-react';
 import { useToast } from './ToastContainer';
 import './FileList.css';
 import { zip } from 'fflate';
 
-const FileList = ({ files, onSelectFile, selectedFile, onDeleteFile }) => {
+const FileList = ({ files, onSelectFile, selectedFile, onDeleteFile, onRenameFile }) => {
   const toast = useToast();
+  const [editingPath, setEditingPath] = useState(null);
+  const [editValue, setEditValue] = useState('');
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (editingPath && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editingPath]);
+
+  const handleStartEdit = (e, path) => {
+    e.stopPropagation();
+    const fileName = path.split('/').pop();
+    setEditingPath(path);
+    setEditValue(fileName);
+  };
+
+  const handleCancelEdit = (e) => {
+    if (e) e.stopPropagation();
+    setEditingPath(null);
+    setEditValue('');
+  };
+
+  const handleConfirmEdit = (e) => {
+    if (e) e.stopPropagation();
+    if (editingPath && editValue.trim()) {
+      const success = onRenameFile(editingPath, editValue.trim());
+      if (success) {
+        setEditingPath(null);
+        setEditValue('');
+      }
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleConfirmEdit();
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
+    }
+  };
   const getFileIcon = (type) => {
     switch (type) {
       case 'xml':
@@ -100,13 +142,41 @@ const FileList = ({ files, onSelectFile, selectedFile, onDeleteFile }) => {
             {fileEntries.map(([path, file]) => (
               <div
                 key={path}
-                className={`file-item ${selectedFile === path ? 'selected' : ''}`}
-                onClick={() => onSelectFile(path)}
+                className={`file-item ${selectedFile === path ? 'selected' : ''} ${editingPath === path ? 'editing' : ''}`}
+                onClick={() => editingPath !== path && onSelectFile(path)}
               >
                 <div className="file-item-info">
                   {getFileIcon(file.type)}
                   <div className="file-details">
-                    <div className="file-name">{path.split('/').pop()}</div>
+                    {editingPath === path ? (
+                      <div className="file-name-edit">
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={handleKeyDown}
+                          onClick={(e) => e.stopPropagation()}
+                          className="file-name-input"
+                        />
+                        <button
+                          className="edit-confirm-btn"
+                          onClick={handleConfirmEdit}
+                          title="確定"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button
+                          className="edit-cancel-btn"
+                          onClick={handleCancelEdit}
+                          title="キャンセル"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="file-name">{path.split('/').pop()}</div>
+                    )}
                     <div className="file-meta">
                       <span className="file-path">{path}</span>
                       <span className="file-size">{getFileSize(file.content)}</span>
@@ -114,6 +184,15 @@ const FileList = ({ files, onSelectFile, selectedFile, onDeleteFile }) => {
                   </div>
                 </div>
                 <div className="file-actions">
+                  {editingPath !== path && (
+                    <button
+                      className="edit-btn"
+                      onClick={(e) => handleStartEdit(e, path)}
+                      title="ファイル名を編集"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                  )}
                   <button
                     className="download-btn"
                     onClick={(e) => handleDownloadFile(e, path, file)}

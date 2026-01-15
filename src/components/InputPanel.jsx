@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
-import { Upload, Download, Plus } from 'lucide-react';
+import { Upload, Download, Plus, Archive } from 'lucide-react';
 import { useToast } from './ToastContainer';
 import './InputPanel.css';
 
 const InputPanel = ({ onDecode, onEncode, onAddFile, hasFiles }) => {
   const [inputText, setInputText] = useState('');
   const [outputText, setOutputText] = useState('');
+  const [zipFileName, setZipFileName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const toast = useToast();
+
+  const getDefaultZipName = () => {
+    const now = new Date();
+    const timestamp = now.toISOString().slice(0, 10).replace(/-/g, '');
+    return `egov-files-${timestamp}`;
+  };
 
   const handleDecode = async () => {
     if (!inputText.trim()) {
@@ -33,11 +40,13 @@ const InputPanel = ({ onDecode, onEncode, onAddFile, hasFiles }) => {
       return;
     }
 
+    const finalZipName = zipFileName.trim() || getDefaultZipName();
+
     setIsLoading(true);
     try {
-      const result = await onEncode();
+      const result = await onEncode(finalZipName);
       setOutputText(result);
-      toast.showSuccess('エンコードが完了しました');
+      toast.showSuccess(`エンコードが完了しました (${finalZipName}.zip)`);
     } catch (error) {
       toast.showError('エラー: ' + error.message);
     } finally {
@@ -123,6 +132,22 @@ const InputPanel = ({ onDecode, onEncode, onAddFile, hasFiles }) => {
       <div className="panel-section">
         <div className="section-header">
           <h3>Output - Base64結果</h3>
+        </div>
+        <div className="zip-filename-input">
+          <div className="zip-filename-label">
+            <Archive size={14} />
+            <span>ZIPファイル名</span>
+          </div>
+          <div className="zip-filename-field">
+            <input
+              type="text"
+              value={zipFileName}
+              onChange={(e) => setZipFileName(e.target.value)}
+              placeholder={getDefaultZipName()}
+              className="zip-name-input"
+            />
+            <span className="zip-extension">.zip</span>
+          </div>
         </div>
         <textarea
           className="output-textarea"

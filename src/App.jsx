@@ -55,6 +55,45 @@ function App() {
     }
   };
 
+  const handleRenameFile = (oldPath, newFileName) => {
+    // Get the directory part of the old path
+    const pathParts = oldPath.split('/');
+    pathParts[pathParts.length - 1] = newFileName;
+    const newPath = pathParts.join('/');
+
+    // Check if new path already exists
+    if (newPath !== oldPath && files[newPath]) {
+      toast.showError(`ファイル「${newFileName}」は既に存在します`);
+      return false;
+    }
+
+    // Validate filename
+    if (!newFileName || newFileName.trim() === '') {
+      toast.showError('ファイル名を入力してください');
+      return false;
+    }
+
+    // Create new files object with renamed file
+    const newFiles = {};
+    for (const [path, file] of Object.entries(files)) {
+      if (path === oldPath) {
+        newFiles[newPath] = { ...file, path: newPath };
+      } else {
+        newFiles[path] = file;
+      }
+    }
+
+    setFiles(newFiles);
+
+    // Update selected file if it was renamed
+    if (selectedFile === oldPath) {
+      setSelectedFile(newPath);
+    }
+
+    toast.showSuccess(`ファイル名を変更しました：${newFileName}`);
+    return true;
+  };
+
   const handleSaveXML = (xmlString) => {
     if (!selectedFile) return;
 
@@ -137,6 +176,7 @@ function App() {
             onSelectFile={handleSelectFile}
             selectedFile={selectedFile}
             onDeleteFile={handleDeleteFile}
+            onRenameFile={handleRenameFile}
           />
         </div>
 

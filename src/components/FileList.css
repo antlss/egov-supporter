@@ -180,3 +180,81 @@
   background: #ffebee;
   color: #f44336;
 }
+
+/* Edit button styles */
+.edit-btn {
+  padding: 6px;
+  border: none;
+  background: transparent;
+  color: #999;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.edit-btn:hover {
+  background: #e3f2fd;
+  color: #2196f3;
+}
+
+/* File name edit mode */
+.file-item.editing {
+  background: #fff8e1;
+  border-color: #ffc107;
+}
+
+.file-name-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.file-name-input {
+  flex: 1;
+  padding: 4px 8px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid #2196f3;
+  border-radius: 4px;
+  outline: none;
+  background: white;
+  min-width: 150px;
+}
+
+.file-name-input:focus {
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.edit-confirm-btn,
+.edit-cancel-btn {
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.edit-confirm-btn {
+  background: #4caf50;
+  color: white;
+}
+
+.edit-confirm-btn:hover {
+  background: #43a047;
+}
+
+.edit-cancel-btn {
+  background: #9e9e9e;
+  color: white;
+}
+
+.edit-cancel-btn:hover {
+  background: #757575;
+}
