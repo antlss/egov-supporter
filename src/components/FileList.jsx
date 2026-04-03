@@ -19,9 +19,8 @@ const FileList = ({ files, onSelectFile, selectedFile, onDeleteFile, onRenameFil
 
   const handleStartEdit = (e, path) => {
     e.stopPropagation();
-    const fileName = path.split('/').pop();
     setEditingPath(path);
-    setEditValue(fileName);
+    setEditValue(path); // Show full path for editing
   };
 
   const handleCancelEdit = (e) => {
@@ -158,6 +157,7 @@ const FileList = ({ files, onSelectFile, selectedFile, onDeleteFile, onRenameFil
                           onKeyDown={handleKeyDown}
                           onClick={(e) => e.stopPropagation()}
                           className="file-name-input"
+                          placeholder="folder/subfolder/filename.xml"
                         />
                         <button
                           className="edit-confirm-btn"
@@ -177,10 +177,12 @@ const FileList = ({ files, onSelectFile, selectedFile, onDeleteFile, onRenameFil
                     ) : (
                       <div className="file-name">{path.split('/').pop()}</div>
                     )}
-                    <div className="file-meta">
-                      <span className="file-path">{path}</span>
-                      <span className="file-size">{getFileSize(file.content)}</span>
-                    </div>
+                    {editingPath !== path && (
+                      <div className="file-meta">
+                        <span className="file-path">{path}</span>
+                        <span className="file-size">{getFileSize(file.content)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="file-actions">
@@ -188,7 +190,7 @@ const FileList = ({ files, onSelectFile, selectedFile, onDeleteFile, onRenameFil
                     <button
                       className="edit-btn"
                       onClick={(e) => handleStartEdit(e, path)}
-                      title="ファイル名を編集"
+                      title="パスを編集"
                     >
                       <Pencil size={16} />
                     </button>

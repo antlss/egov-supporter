@@ -55,21 +55,19 @@ function App() {
     }
   };
 
-  const handleRenameFile = (oldPath, newFileName) => {
-    // Get the directory part of the old path
-    const pathParts = oldPath.split('/');
-    pathParts[pathParts.length - 1] = newFileName;
-    const newPath = pathParts.join('/');
+  const handleRenameFile = (oldPath, newPath) => {
+    // newPath is now the full path
+    newPath = newPath.trim();
 
-    // Check if new path already exists
-    if (newPath !== oldPath && files[newPath]) {
-      toast.showError(`ファイル「${newFileName}」は既に存在します`);
+    // Validate
+    if (!newPath) {
+      toast.showError('パスを入力してください');
       return false;
     }
 
-    // Validate filename
-    if (!newFileName || newFileName.trim() === '') {
-      toast.showError('ファイル名を入力してください');
+    // Check if new path already exists
+    if (newPath !== oldPath && files[newPath]) {
+      toast.showError(`「${newPath}」は既に存在します`);
       return false;
     }
 
@@ -90,7 +88,7 @@ function App() {
       setSelectedFile(newPath);
     }
 
-    toast.showSuccess(`ファイル名を変更しました：${newFileName}`);
+    toast.showSuccess(`パスを変更しました：${newPath}`);
     return true;
   };
 
@@ -107,13 +105,24 @@ function App() {
   };
 
   const handleAddFile = (filename, content) => {
-    // Generate a unique path
-    let path = filename;
+    // Detect common folder prefix from existing files
+    let prefix = '';
+    const existingPaths = Object.keys(files);
+    if (existingPaths.length > 0) {
+      const firstPath = existingPaths[0];
+      const lastSlash = firstPath.lastIndexOf('/');
+      if (lastSlash > 0) {
+        prefix = firstPath.substring(0, lastSlash + 1);
+      }
+    }
+
+    // Generate a unique path under the detected folder
+    let path = prefix + filename;
     let counter = 1;
     while (files[path]) {
-      const ext = filename.split('.').pop();
-      const name = filename.substring(0, filename.lastIndexOf('.'));
-      path = `${name}_${counter}.${ext}`;
+      const ext = filename.includes('.') ? filename.split('.').pop() : '';
+      const name = filename.includes('.') ? filename.substring(0, filename.lastIndexOf('.')) : filename;
+      path = ext ? `${prefix}${name}_${counter}.${ext}` : `${prefix}${name}_${counter}`;
       counter++;
     }
 
